@@ -3,28 +3,6 @@
 #include <dos.h>
 
 #define COUNT 9
-#define TIME_RUN 65536
-
-void soundGeneration();
-void divisionCoefficient();
-void statusWord();
-
-void main() {
-	clrscr();
-	char choice;
-	do {
-		printf("\n\n1. Sound generation.\n2. Coefficient of division.\n3. Status word.\n0. Exit.\n");
-		fflush(stdin);
-		printf("\nYour choise: ");
-		scanf("%s", &choice);
-
-		switch (choice) {
-		case '1': soundGeneration(); break;
-		case '2': divisionCoefficient(); break;
-		case '3': statusWord(); break;
-		}
-	} while (choice != '0');
-}
 
 void soundGeneration() {
 	int frequency[COUNT] = { 329, 329, 329, 415, 523, 659, 586, 523, 659 };
@@ -35,13 +13,36 @@ void soundGeneration() {
 	for (frequencyCounter = 0; frequencyCounter < COUNT; frequencyCounter++) {
 		outp(0x43, 0xB6);
 		kd = base / frequency[frequencyCounter];
-		outp(0x42, kd % 256);
+		outp(0x42, kd % 256); 
 		kd /= 256;
 		outp(0x42, kd);
 
 		outp(0x61, inp(0x61) | 3);
 		delay(durability[frequencyCounter]);
 		outp(0x61, inp(0x61) & 0xFC);
+	}
+}
+
+void statusWord() {
+	printf("\n\nStatus word: \n");
+	char stateWord[8];
+	int Channel, state;
+	int ports[] = { 0x40, 0x41, 0x42 };
+	int controlWords[] = { 226, 228, 232 };   //11 10 001 0, 11 10 010 0, 11 10 100 0
+
+	for (Channel = 0; Channel < 3; Channel++) {
+		outp(0x43, controlWords[Channel]);
+		state = inp(ports[Channel]);
+
+		for (int i = 7; i >= 0; i--) {
+			stateWord[i] = state % 2 + '0';
+			state /= 2;
+		}
+		printf("\nChannel %d: ", Channel);
+		for (i = 0; i < 8; i++) {
+			printf("%c", stateWord[i]);
+		}
+		printf("\n");
 	}
 }
 
@@ -62,7 +63,7 @@ void divisionCoefficient() {
 			outp(0x61, inp(0x61) | 3);
 		}
 
-		for (j = 0; j < TIME_RUN; j++) {
+		for (j = 0; j < 65536; j++) {
 			outp(0x43, controlWords[Channel]);
 			kdLow = inp(ports[Channel]);
 			kdHigh = inp(ports[Channel]);
@@ -76,30 +77,21 @@ void divisionCoefficient() {
 		if (Channel == 2) {
 			outp(0x61, inp(0x61) & 0xFC);
 		}
-		printf("\nChannel %d: %4X\n", Channel, max);
+		printf("\nChannel %d: %X\n", Channel, max);
 	}
 }
 
-void statusWord() {
-	printf("\n\nStatus word: \n");
-	char stateWord[8];
-	int Channel, state;
-	int ports[] = { 0x40, 0x41, 0x42 };
-	int controlWords[] = { 226, 228, 232 };   //11 10 001 0, 11 10 010 0, 11 10 100 0
+void main() {
+	char choice;
+	do {
+		printf("\n1. Sound generation\n2. Status word\n3. Coefficient of division\n0. Exit\n");
+		printf("\nYour choise: ");
+		scanf("%s", &choice);
 
-	for (Channel = 0; Channel < 3; Channel++) {
-		outp(0x43, controlWords[Channel]);
-		state = inp(ports[Channel]);
-
-		for (int i = 7; i >= 0; i--) {
-			stateWord[i] = state % 2 + '0';
-			state /= 2;
-
+		switch (choice) {
+		case '1': soundGeneration(); break;
+		case '2': statusWord(); break;
+		case '3': divisionCoefficient(); break;
 		}
-		printf("\nChannel %d: ", Channel);
-		for (i = 0; i < 8; i++) {
-			printf("%c", stateWord[i]);
-		}
-		printf("\n");
-	}
+	} while (choice != '0');
 }
